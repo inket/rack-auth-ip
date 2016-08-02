@@ -4,7 +4,7 @@ require 'ipaddr'
 
 module Rack::Auth::IP::CustomMatchers
   class BeForbidden
-    def matches? actual
+    def matches?(actual)
       @actual = actual
       actual[0] == 403
     end
@@ -22,28 +22,28 @@ end
 describe Rack::Auth::IP do
   describe 'detect_ip' do
     it 'should return REMOTE_ADDR if not exists HTTP_X_FORWARDED_FOR' do
-      Rack::Auth::IP::Util.detect_ip({"REMOTE_ADDR" => '127.0.0.1'}).should == '127.0.0.1'
+      Rack::Auth::IP::Util.detect_ip('REMOTE_ADDR' => '127.0.0.1').should == '127.0.0.1'
     end
 
     it 'should return HTTP_X_FORWARDED_FOR if exists HTTP_X_FORWARDED_FOR' do
-      Rack::Auth::IP::Util.detect_ip({'HTTP_X_FORWARDED_FOR' => '192.168.0.1', "REMOTE_ADDR" => '127.0.0.1'}).should == '192.168.0.1'
+      Rack::Auth::IP::Util.detect_ip('HTTP_X_FORWARDED_FOR' => '192.168.0.1', 'REMOTE_ADDR' => '127.0.0.1').should == '192.168.0.1'
     end
 
     it 'should return last HTTP_X_FORWARDED_FOR if HTTP_X_FORWARDED_FOR has multi address' do
-      Rack::Auth::IP::Util.detect_ip({'HTTP_X_FORWARDED_FOR' => '192.168.0.1,192.168.0.2', "REMOTE_ADDR" => '127.0.0.1'}).should == '192.168.0.2'
+      Rack::Auth::IP::Util.detect_ip('HTTP_X_FORWARDED_FOR' => '192.168.0.1,192.168.0.2', 'REMOTE_ADDR' => '127.0.0.1').should == '192.168.0.2'
     end
   end
 
   describe 'when with block' do
     before do
-      @env = { "REMOTE_ADDR" => '127.0.0.1' }
-      @app = proc {|env| env }
+      @env = { 'REMOTE_ADDR' => '127.0.0.1' }
+      @app = proc { |env| env }
     end
 
     it 'should recieve IPAddr instance in block' do
-      Rack::Auth::IP.new(@app) {|ip|
-        ip.should == IPAddr.new(@env["REMOTE_ADDR"])
-      }.call(@env)
+      Rack::Auth::IP.new(@app) do |ip|
+        ip.should == IPAddr.new(@env['REMOTE_ADDR'])
+      end.call(@env)
     end
   end
 
@@ -51,8 +51,8 @@ describe Rack::Auth::IP do
     include Rack::Auth::IP::CustomMatchers
 
     before do
-      @env = { "REMOTE_ADDR" => '127.0.0.1' }
-      @app = proc {|env| env }
+      @env = { 'REMOTE_ADDR' => '127.0.0.1' }
+      @app = proc { |env| env }
     end
 
     it 'should be forbidden when ip list is blank' do

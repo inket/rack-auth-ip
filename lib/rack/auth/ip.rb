@@ -10,16 +10,16 @@ module Rack
     #   # you can use block
     #   # ip is IPAddr instance.
     #   use Rack::Auth::IP do |ip|
-    #     Your::Model::IP.count({ :ip => ip.to_s }) != 0 
+    #     Your::Model::IP.count({ :ip => ip.to_s }) != 0
     #   end
     class IP
       module Util
         # consider using reverse proxy
-        def detect_ip env
+        def detect_ip(env)
           if env['HTTP_X_FORWARDED_FOR']
             env['HTTP_X_FORWARDED_FOR'].split(',').pop
           else
-            env["REMOTE_ADDR"]
+            env['REMOTE_ADDR']
           end
         end
 
@@ -27,30 +27,24 @@ module Rack
       end
       include Util
 
-      def initialize app, ip_list=nil, &block
+      def initialize(app, ip_list = nil, &block)
         @app = app
         @ip_list = ip_list
 
-        if @ip_list && @ip_list.size > 0
-          @ip_list = IPAddrList.new(@ip_list)
-        end
+        @ip_list = IPAddrList.new(@ip_list) if @ip_list && !@ip_list.empty?
 
         @cond = block
       end
 
-      def call env
+      def call(env)
         req_ip = IPAddr.new(detect_ip(env))
 
         if @ip_list
-          if @ip_list.include?(req_ip)
-            return @app.call(env)
-          end
+          return @app.call(env) if @ip_list.include?(req_ip)
         else
-          if @cond && @cond.call(req_ip)
-            return @app.call(env)
-          end
+          return @app.call(env) if @cond && @cond.call(req_ip)
         end
-        return [403, {'Content-Type' => 'text/plain' }, ['Forbidden'] ]
+        [403, { 'Content-Type' => 'text/plain' }, ['Forbidden']]
       end
     end
   end
