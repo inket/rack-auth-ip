@@ -15,15 +15,15 @@ module Rack
     class IP
       module Util
         # consider using reverse proxy
-        def detect_ip(env)
+        def detect_ips(env)
           if env['HTTP_X_FORWARDED_FOR']
-            env['HTTP_X_FORWARDED_FOR'].split(',').pop
+            env['HTTP_X_FORWARDED_FOR'].split(',')
           else
-            env['REMOTE_ADDR']
+            [env['REMOTE_ADDR']]
           end
         end
 
-        module_function :detect_ip
+        module_function :detect_ips
       end
       include Util
 
@@ -37,13 +37,18 @@ module Rack
       end
 
       def call(env)
-        req_ip = IPAddr.new(detect_ip(env))
+        ips = detect_ips(env)
 
-        if @ip_list
-          return @app.call(env) if @ip_list.include?(req_ip)
-        else
-          return @app.call(env) if @cond && @cond.call(req_ip)
+        ips.each do |ip|
+          req_ip = IPAddr.new(ip)
+
+          if @ip_list && @ip_list.include?(req_ip)
+            return @app.call(env)
+          elsif @cond && @cond.call(req_ip)
+            return @app.call(env)
+          end
         end
+
         [403, { 'Content-Type' => 'text/plain' }, ['Forbidden']]
       end
     end
